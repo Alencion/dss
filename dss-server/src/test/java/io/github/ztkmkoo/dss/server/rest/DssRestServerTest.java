@@ -4,8 +4,8 @@ import static org.awaitility.Awaitility.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.*;
+import java.lang.reflect.Method;
 import java.net.URLDecoder;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
@@ -19,9 +19,9 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 
+import io.github.ztkmkoo.dss.core.actor.exception.DssRestRequestMappingException;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.client.methods.RequestBuilder;
 import org.apache.http.entity.StringEntity;
@@ -30,6 +30,7 @@ import org.apache.http.util.EntityUtils;
 import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import io.github.ztkmkoo.dss.core.actor.exception.ExceptionHandling;
 import io.github.ztkmkoo.dss.core.actor.rest.entity.DssRestServiceRequest;
 import io.github.ztkmkoo.dss.core.actor.rest.entity.DssRestServiceResponse;
 import io.github.ztkmkoo.dss.core.actor.rest.service.DssRestActorFormDataService;
@@ -117,7 +118,8 @@ public class DssRestServerTest {
         await().until(dssRestServer::isActivated);
 
         final String uri = "http://127.0.0.1:8181/test/json";
-        final String sendJsonBody = "{\"name\":\"myname\",\"age\":20}";
+//        final String sendJsonBody = "{\"name\":\"myname\",\"age\":20}";
+        final String sendJsonBody = "{\"name\":\"myname\",\"age\":20,\"body\":\"body\"}";
 
         HttpResponse response = sendJsonRequest(uri, DssRestMethodType.POST, sendJsonBody);
 
@@ -186,6 +188,7 @@ public class DssRestServerTest {
         }
 
         @Override
+        @ExceptionHandling(handler = JsonMappingExceptionHandler.class, exception = DssRestRequestMappingException.class)
         protected DssRestServiceResponse handlingRequest(DssRestServiceRequest<TestJsonRequest> request) {
             final TestJsonRequest testRequest = request.getBody();
 

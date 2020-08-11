@@ -4,6 +4,8 @@ import akka.actor.typed.Behavior;
 import akka.actor.typed.javadsl.ActorContext;
 import akka.actor.typed.javadsl.Behaviors;
 import io.github.ztkmkoo.dss.core.actor.exception.DssRestRequestMappingException;
+import io.github.ztkmkoo.dss.core.actor.exception.ExceptionHandler;
+import io.github.ztkmkoo.dss.core.actor.exception.ExceptionHandling;
 import io.github.ztkmkoo.dss.core.actor.rest.entity.DssRestServiceResponse;
 import io.github.ztkmkoo.dss.core.actor.rest.service.DssRestActorService;
 import io.github.ztkmkoo.dss.core.message.rest.DssRestChannelHandlerCommandResponse;
@@ -11,6 +13,8 @@ import io.github.ztkmkoo.dss.core.message.rest.DssRestServiceActorCommand;
 import io.github.ztkmkoo.dss.core.message.rest.DssRestServiceActorCommandRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
 import java.util.Objects;
 
 /**
@@ -56,6 +60,23 @@ public class DssRestServiceActor {
             }
         } catch (DssRestRequestMappingException e) {
             context.getLog().error("Json request mapping error: ", e);
+            Class<? extends DssRestActorService> aClass = dssRestActorService.getClass();
+            Method[] methods = aClass.getDeclaredMethods();
+            try {
+                for (Method method : methods) {
+                    if (method.getName().equals("handlingRequest")) {
+                        Annotation[] annotations = method.getAnnotations();
+                        for (Annotation annotation : annotations) {
+                            if (annotation.annotationType().equals(ExceptionHandling.class)) {
+                                ExceptionHandler handler = ((ExceptionHandling) annotation).handler().getDeclaredConstructor().newInstance();
+                                handler.handleException(e);
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e1) {
+                e1.printStackTrace();
+            }
             replyRequest(request, HttpResponseStatus.BAD_REQUEST);
         } catch (Exception e) {
             context.getLog().error("Handling rest request error: ", e);
